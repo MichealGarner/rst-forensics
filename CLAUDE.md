@@ -1,6 +1,9 @@
 # CLAUDE.md — rst-forensics working memory
 
-Living context for any Claude session opening this repo. Update as decisions are made.
+> Working memory for Claude Code sessions on this repo. Kept in-tree because
+> the project was built with Claude assistance and the conventions here are
+> useful both to future sessions and to readers curious about how the codebase
+> is organised. See the [README](./README.md) for the user-facing intro.
 
 ## What this is
 
@@ -11,17 +14,10 @@ who sent it — the question of whether your server closed politely, a corporate
 firewall forged the close, or your client gave up is usually answered by tribal
 knowledge. This tool gives a reproducible, weighted-evidence verdict instead.
 
-The author is **Micheal Garner** (`michealgarner@hotmail.co.uk`,
-GitHub `MichealGarner`). The repo is public at
-<https://github.com/MichealGarner/rst-forensics>.
-
-## Why it exists (the actual goal)
-
-This is a **companion repo for a blog post**. The code is the artefact the post
-will reference and link to. It is **not** a maintained library, **not** on PyPI,
-and there is no plan to publish it. The README, CI, and badges exist to make the
-repo presentable to readers arriving from the post — not to support a release
-cadence.
+The companion blog post lives at
+[michealgarner.co.uk/blog/who-sent-that-rst-forensic-classification-of-tcp-resets-with-rst-forensics](https://michealgarner.co.uk/blog/who-sent-that-rst-forensic-classification-of-tcp-resets-with-rst-forensics).
+It walks a SaaS-vs-customer-firewall scenario through to the four-fingerprint
+MIDPATH evidence list. The repo is the artefact the post links to.
 
 ## Repo layout
 
@@ -33,7 +29,6 @@ rst_forensics/
   verdict.py         # Verdict, classify(), Verdict.explain()
   flow.py            # FlowTracker — library-agnostic, builds baselines
   adapters/
-    __init__.py
     _scapy.py        # shared scapy helpers
     pcap.py          # read pcap/pcapng → list[RstObservation]
     passive.py       # AsyncSniffer-backed live capture
@@ -41,11 +36,11 @@ rst_forensics/
   cli.py             # rst-forensics console_script — Rich + JSON output
 
 tests/
-  test_scoring.py    # Phase 1 unit tests (each scorer)
-  test_verdict.py    # Phase 1 aggregation tests
-  test_flow.py       # Phase 2 FlowTracker tests, no scapy import
-  test_cli.py        # Phase 2 CLI tests, monkeypatches adapters
-  test_fixtures.py   # Phase 3 end-to-end tests against committed pcaps
+  test_scoring.py    # per-scorer unit tests
+  test_verdict.py    # aggregation tests
+  test_flow.py       # FlowTracker tests, no scapy import
+  test_cli.py        # CLI tests, monkeypatches adapters
+  test_fixtures.py   # end-to-end against built pcaps
                      # (uses pytest.importorskip("scapy"))
   fixtures/
     build_fixtures.py  # deterministic regenerator — committed; pcaps are not
@@ -65,33 +60,11 @@ number vs. expected/window, and arrival timing vs. RTT. Aggregator sums weights
 per origin (ignoring `UNKNOWN`), picks the largest, reports
 `confidence = winning / total`. See `README.md` heuristics table for vote logic.
 
-## Phases shipped
-
-* **Phase 1** — pure-Python classifier. No scapy dependency. `Verdict.explain()`
-  prints per-scorer reasons.
-* **Phase 2** — `FlowTracker` baseline builder + three scapy-backed adapters
-  (passive sniffer, active probe, pcap reader) + Rich/JSON CLI with
-  pmtud-sweeper-style exit codes (0 clean, 1 setup error, 2 ≥1 MIDPATH).
-* **Phase 3a** — deterministic fixture pcaps via `tests/fixtures/build_fixtures.py`.
-  Three scenarios: clean server-originated RST, FortiGate inline forgery,
-  client give-up. End-to-end tests in `test_fixtures.py`.
-* **Phase 3b** — public GitHub repo, three commits (CI / publish / docs).
-* **Phase 3c** — `test.yml` matrix, regenerates fixtures in CI, runs pytest.
-  **Confirmed green on GitHub-hosted runners across 3.10–3.14.**
-* **Phase 3d** — `publish.yml` written but **dormant**. Trusted Publishing
-  on PyPI is **not** configured; do not tag `v*.*.*` until/unless that's set
-  up, or the publish job will go red.
-* **Phase 3e** — README badges (CI + static Python-versions + MIT) and "why
-  this exists" callout. PyPI badges removed because the repo isn't published.
-* **Phase 3f** — Python 3.14 added to CI matrix after local verification that
-  scapy 2.7.0 works on 3.14.
-
 ## Decisions worth not re-litigating
 
-* **Not publishing to PyPI.** Goal is the blog post; `pip install
+* **Not publishing to PyPI.** `pip install
   git+https://github.com/MichealGarner/rst-forensics` is enough for readers
-  who want to try it. `publish.yml` left dormant in case future-Micheal
-  changes his mind.
+  who want to try it. `publish.yml` left dormant in case that changes.
 * **Fixture pcaps are built in CI / locally, not committed.** Builder is
   deterministic, pcaps are byte-identical across runs. Keeps repo lean.
 * **Scapy is optional.** The classifier core has no scapy dependency. Only
@@ -100,51 +73,37 @@ per origin (ignoring `UNKNOWN`), picks the largest, reports
 * **CI matrix is 3.10–3.14**, matching `requires-python = ">=3.10"` in
   pyproject.
 
-## Operational notes for future Claude sessions
+## Local dev loop
 
-* **Author env**: Windows, PowerShell, Python 3.14 installed system-wide.
-  Working directory is `D:\Workarea\Claude\Projects\rst-forensics`. PowerShell
-  execution policy was set to `RemoteSigned -Scope CurrentUser`, so `.ps1`
-  activate scripts work.
-* **Local dev loop**:
-  ```powershell
-  python -m venv .venv
-  .\.venv\Scripts\Activate.ps1
-  pip install -e ".[test,all]"
-  python tests/fixtures/build_fixtures.py
-  pytest -q
-  ```
-  46 tests, ~all green on 3.14.
-* **scapy on Windows** emits `WARNING: No libpcap provider available ! pcap
-  won't be used` at import. Harmless for pcap *reading* and packet *building*
-  (which is what tests use). Only matters for live capture (`rst-forensics
-  passive` / `active`) — install Npcap from npcap.com if you need that.
-* **Sandbox/shell flake**: in at least one Cowork session, the workspace
-  Linux sandbox failed to boot ("Workspace unavailable. The isolated Linux
-  environment failed to start"). File tools still worked. If shell is dead,
-  hand the user PowerShell commands to run locally rather than burning time
-  retrying the sandbox.
+```bash
+python -m venv .venv
+source .venv/bin/activate          # PowerShell: .\.venv\Scripts\Activate.ps1
+pip install -e ".[test,all]"
+python tests/fixtures/build_fixtures.py
+pytest -q
+```
 
-## Open / next
-
-* **Blog post.** The next session is for drafting it. Audience, length,
-  publication venue, tone, and which scenario to lead with are all TBD —
-  the user will brief the new session directly. Material to draw from:
-  the README's "why this exists" callout, the heuristics table, the three
-  fixture scenarios in `test_fixtures.py`, and the `Verdict.explain()`
-  output style.
-* **Phase 4 (deferred, possibly never)** — direction-aware scoring so an
-  outgoing client RST verdicts as `CLIENT` instead of `SERVER`-leaning with
-  a CLIENT timing dissent. Not blocking the blog post; flag for the future.
+46 tests. The `[all]` extra pulls scapy + rich for the adapters and CLI; the
+`test_fixtures.py` module skips cleanly without scapy. On Windows, scapy emits
+a benign `No libpcap provider available` warning at import — harmless for
+pcap reading and packet building (which is what the tests use). Live capture
+(`rst-forensics passive` / `active`) needs Npcap from npcap.com.
 
 ## Things to avoid
 
-* Don't re-add PyPI version / pyversions badges to the README — they'll
-  render as "not found".
-* Don't tag `v*.*.*` without first either configuring Trusted Publishing on
-  PyPI or temporarily disabling `publish.yml`. Otherwise a red publish job
-  appears in Actions for no benefit.
-* Don't commit the fixture `.pcap` files — they're built on demand and
-  are gitignored via `tests/fixtures/*.pcap` (and `.pcapng`). If you find
-  yourself wanting to commit one, the deterministic builder is the right
+* **Don't re-add PyPI version / pyversions badges to the README** — they'll
+  render as "not found" because the package isn't published.
+* **Don't tag `v*.*.*`** without first either configuring Trusted Publishing
+  on PyPI or disabling `publish.yml`. Otherwise a red publish job appears in
+  Actions for no benefit.
+* **Don't commit the fixture `.pcap` files.** They're gitignored via
+  `tests/fixtures/*.pcap` (and `.pcapng`). The deterministic builder is the
   source of truth, not a checked-in binary.
+
+## Possible future work
+
+Direction-aware scoring would let outgoing client RSTs verdict cleanly as
+`CLIENT` instead of leaning `SERVER` on the fingerprint scorers with only the
+timing scorer dissenting. Currently every scorer compares against the server
+baseline; a parallel client-baseline path (or per-direction scorer set) is the
+shape of the fix. Not on the roadmap unless someone asks for it.
