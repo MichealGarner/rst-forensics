@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rst-forensics"
+version = "0.3.0"
+description = "Classify TCP RST origin (server / mid-path firewall / client) from packet observations."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Micheal Garner", email = "micheal@michealgarner.co.uk" }]
+keywords = ["tcp", "rst", "forensics", "network", "pcap"]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+capture = ["scapy>=2.5"]
+cli = ["rich>=13"]
+all = ["scapy>=2.5", "rich>=13"]
+
+[project.scripts]
+rst-forensics = "rst_forensics.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rst_forensics"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
