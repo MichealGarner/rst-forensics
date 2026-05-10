@@ -1,8 +1,7 @@
 # rst-forensics
 
 [![tests](https://github.com/MichealGarner/rst-forensics/actions/workflows/test.yml/badge.svg)](https://github.com/MichealGarner/rst-forensics/actions/workflows/test.yml)
-[![PyPI](https://img.shields.io/pypi/v/rst-forensics.svg)](https://pypi.org/project/rst-forensics/)
-[![Python versions](https://img.shields.io/pypi/pyversions/rst-forensics.svg)](https://pypi.org/project/rst-forensics/)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://github.com/MichealGarner/rst-forensics/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Classify the origin of a TCP RST — **server**, **mid-path firewall**, or **client** —
