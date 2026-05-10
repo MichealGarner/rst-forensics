@@ -6,3 +6,8 @@ dist/
 build/
 *.egg-info/
 .coverage
+
+# Phase 3 fixture pcaps are generated on demand by
+# tests/fixtures/build_fixtures.py — don't commit them.
+tests/fixtures/*.pcap
+tests/fixtures/*.pcapng
