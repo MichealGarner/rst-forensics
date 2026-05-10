@@ -1,0 +1,72 @@
+name: publish
+
+# Publishes to PyPI when a v*.*.* tag is pushed.
+#
+# Relies on PyPI Trusted Publishing — set this up once at
+# https://pypi.org/manage/account/publishing/ with:
+#   PyPI Project Name : rst-forensics
+#   Owner             : <your GitHub user / org>
+#   Repository        : rst-forensics
+#   Workflow filename : publish.yml
+#   Environment name  : pypi
+# No PYPI_API_TOKEN secret is needed; the OIDC `id-token: write`
+# permission in the publish job is what authenticates.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Verify version tag matches pyproject
+        # Cheap protection against pushing a v0.4.0 tag with pyproject still
+        # claiming 0.3.0 — fail before we publish a mislabelled artifact.
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          pkg=$(python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "Tag version: $tag"
+          echo "Package version: $pkg"
+          test "$tag" = "$pkg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/rst-forensics
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
